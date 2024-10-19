@@ -1,45 +1,86 @@
-
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
-test("popup validations", async ({ page }) => {
+// Constants for selectors and reusable values
+const GITHUB_URL = 'https://github.com/juanchoaut/pw_certi';
+const GOOGLE_URL = 'http://google.com';
+const GITHUB_LOGIN_URL = 'https://github.com/login';
 
-    await page.goto("https://github.com/juanchoaut/pw_certi");
+async function navigateToPage(page, url) {
+    await page.goto(url);
+}
 
-    await page.goto("http://google.com");
-    // await page.goBack();
-    // await page.goForward();
+async function validateVisibility(page, selector, isVisible) {
+    if (isVisible) {
+        await expect(page.locator(selector)).toBeVisible();
+    } else {
+        await expect(page.locator(selector)).toBeHidden();
+    }
+}
 
-    await expect(page.locator("#visible_text")).toBeVisible();
-    await page.locator("#hide-tultip").click();
-    await expect(page.locator("#text_visible")).toBeHidden();
+async function clickElement(page, selector) {
+    await page.locator(selector).click();
+}
 
-    await page.pause();
+async function hoverElement(page, selector) {
+    await page.locator(selector).hover();
+}
+
+async function acceptDialog(page) {
     page.on('dialog', dialog => dialog.accept());
-    await page.locator(".acept_button").click();
-    await page.locator(".raton_over").hover();
+}
 
-    const framePage = page.frameLocator("#iframe_number004");
-    await framePage.locator("li a[href*='lifetime-access']:visible").click();
-    const textCheck = await framePage.locator("#locator_h1").textContent();
-    console.log(textCheck.split(" ")[1]);
+async function takeScreenshot(page, selector, path) {
+    await page.locator(selector).screenshot({ path });
+}
 
+test("popup validations", async ({ page }) => {
+    try {
+        await navigateToPage(page, GITHUB_URL);
+        await navigateToPage(page, GOOGLE_URL);
 
-})
+        await validateVisibility(page, "#visible_text", true);
+        await clickElement(page, "#hide-tultip");
+        await validateVisibility(page, "#text_visible", false);
+
+        await page.pause();
+        await acceptDialog(page);
+        await clickElement(page, ".acept_button");
+        await hoverElement(page, ".raton_over");
+
+        const framePage = page.frameLocator("#iframe_number004");
+        await framePage.locator("li a[href*='lifetime-access']:visible").click();
+        const textCheck = await framePage.locator("#locator_h1").textContent();
+        console.log(textCheck.split(" ")[1]);
+
+    } catch (error) {
+        console.error('Test failed:', error);
+        throw error; // Rethrow the error to fail the test
+    }
+});
 
 test("screenshot and visual comparison", async ({ page }) => {
+    try {
+        await navigateToPage(page, GITHUB_LOGIN_URL);
+        await validateVisibility(page, "//*[@classname='tous of royalty']", true);
+        await takeScreenshot(page, '#visible_text', 'temporalScreenshot.png');
+        await clickElement(page, "#show_textbox");
+        await page.screenshot({ path: 'screenshot.png' });
+        await validateVisibility(page, "#visible-text", false);
 
-    await page.goto("https://github.com/login");
-    await expect(page.locator("//*[@classname='tous of royalty']")).toBeVisible();
-    await page.locator('#visible_text').screenshot({ path: 'temporalScreenshot.png' });
-    await page.locator("#show_textbox").click();
-    await page.screenshot({ path: 'screenshot.png' });
-    await expect(page.locator("#visible-text")).toBeHidden();
-
+    } catch (error) {
+        console.error('Test failed:', error);
+        throw error; // Rethrow the error to fail the test
+    }
 });
 
 test('visual', async ({ page }) => {
-    await page.goto("https://github.com/login");
-    expect(await page.screenshot()).toMatchSnapshot('github.png');
+    try {
+        await navigateToPage(page, GITHUB_LOGIN_URL);
+        expect(await page.screenshot()).toMatchSnapshot('github.png');
 
-})
+    } catch (error) {
+        console.error('Test failed:', error);
+        throw error; // Rethrow the error to fail the test
+    }
+});
